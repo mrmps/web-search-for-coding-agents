@@ -145,9 +145,33 @@ DATASETS_ROOT=/path/to/tickets PYTHONPATH=scripts python -m coding_search run \
 `tavily_fast`, `linkup` → `linkup_fast`.
 
 Keys: `OPENAI_API_KEY` (or Azure NEXTGEN), plus the vendor you run
-(`PARALLEL_API_KEY`, `FIRECRAWL_API_KEY`, `EXA_API_KEY`, `LINKUP_API_KEY`,
+(`CONTEXT_API_KEY`, `PARALLEL_API_KEY`, `FIRECRAWL_API_KEY`, `EXA_API_KEY`, `LINKUP_API_KEY`,
 `TAVILY_API_KEY`, `BRAVE_SEARCH_API_KEY`, `YDC_API_KEY` or `YOU_API_KEY`,
 `TINYFISH_API_KEY`, `PERPLEXITY_API_KEY`). Optional: `BRAINTRUST_API_KEY`.
+
+### Context.dev
+
+Use `--backend context` with either `--split search-only` or
+`--split search-fetch`, and set `CONTEXT_API_KEY`. Search calls
+`POST https://api.context.dev/v1/web/search` with `highlightsOptions.enabled=true`;
+successful highlights become snippets, with the result description used when
+highlights are unavailable or empty. Context requires 10–100 results per request,
+so the runner requests at least 10 and returns only the harness's requested count
+(eight by default), with snippets capped at 1,200 characters. Other API options
+keep their defaults and the query is sent unchanged.
+
+Fetch calls `GET https://api.context.dev/v1/web/scrape/markdown` for the selected
+URL and returns up to the shared 16,000-character limit. Both splits use the same
+search configuration. Context is available in the harness; leaderboard scores
+require a maintainer run on the held-out tickets.
+
+To exercise live search and fetch without the private dataset or an LLM key:
+
+```bash
+CONTEXT_LIVE=1 PYTHONPATH=scripts python -m unittest coding_search.test_context.ContextLive
+```
+
+This uses API credits and writes a redacted artifact to `runs/context-smoke.json`.
 
 ## Repository map
 
