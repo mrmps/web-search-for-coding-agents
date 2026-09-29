@@ -25,6 +25,7 @@ FIRECRAWL_SEARCH_URL = "https://api.firecrawl.dev/v2/search"
 FIRECRAWL_SCRAPE_URL = "https://api.firecrawl.dev/v2/scrape"
 CONTEXT_SEARCH_URL = "https://api.context.dev/v1/web/search"
 CONTEXT_SCRAPE_URL = "https://api.context.dev/v1/web/scrape/markdown"
+CONTEXT_SNIPPET_CHARS = 1200
 EXA_SEARCH_URL = "https://api.exa.ai/search"
 EXA_CONTENTS_URL = "https://api.exa.ai/contents"
 LINKUP_SEARCH_URL = "https://api.linkup.so/v1/search"
@@ -234,13 +235,13 @@ class ContextSearch:
             json_body={
                 "query": query,
                 "numResults": max(10, n),
-                "highlightsOptions": {"enabled": True},
+                "highlightsOptions": {"enabled": True, "maxCharacters": CONTEXT_SNIPPET_CHARS},
             },
             timeout=60,
         )
         self.last_meta = meta
         hits = parse_context_hits(payload, max_results=n)
-        self.last_meta = _search_meta(meta, hits)
+        self.last_meta = {**_search_meta(meta, hits), "cache_metadata": payload.get("cache_metadata")}
         return hits
 
     def fetch(self, url: str, *, objective: str = "") -> dict[str, str]:
@@ -249,7 +250,7 @@ class ContextSearch:
             "GET",
             CONTEXT_SCRAPE_URL,
             headers=self._headers(),
-            params={"url": url},
+            params={"url": url, "useMainContentOnly": "true"},
             timeout=FETCH_TIMEOUT_S,
         )
         self.last_meta = meta
@@ -848,7 +849,7 @@ def parse_context_hits(payload: Any, *, max_results: int = DEFAULT_MAX_RESULTS) 
         hits.append({
             "url": url,
             "title": str(item.get("title") or ""),
-            "snippet": (snippet or str(item.get("description") or ""))[:1200],
+            "snippet": (snippet or str(item.get("description") or ""))[:CONTEXT_SNIPPET_CHARS],
         })
         if len(hits) >= max_results:
             break
@@ -872,6 +873,7 @@ def parse_context_scrape(
         "title": str(metadata.get("title") or ""),
         "content": content[:max_chars],
         "_truncated": len(content) > max_chars,
+        "_cache_metadata": payload.get("cache_metadata"),
     }
 
 

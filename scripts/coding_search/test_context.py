@@ -48,7 +48,7 @@ class ContextContracts(unittest.TestCase):
                 self.assertEqual(call.call_args.args, ("POST", search.CONTEXT_SEARCH_URL))
                 self.assertEqual(call.call_args.kwargs["json"], {
                     "query": "site:example.com unchanged query", "numResults": requested,
-                    "highlightsOptions": {"enabled": True},
+                    "highlightsOptions": {"enabled": True, "maxCharacters": 1200},
                 })
                 self.assertEqual(hits[0], {
                     "url": "https://example.com", "title": "Example", "snippet": "x" * 1200,
@@ -75,15 +75,19 @@ class ContextContracts(unittest.TestCase):
 
     def test_fetch_redirect_truncation_and_redaction(self):
         payload = {"success": True, "url": "https://example.com", "markdown": "x" * 20000,
+                   "cache_metadata": {"status": "hit", "age_ms": 1000},
                    "metadata": {"finalUrl": "https://example.com/docs", "title": "Docs"}}
         with patch.object(search.requests, "request", return_value=self.response(payload)) as call:
             page = self.backend.fetch("https://example.com", objective="find docs")
             self.assertEqual(call.call_args.args, ("GET", search.CONTEXT_SCRAPE_URL))
-            self.assertEqual(call.call_args.kwargs["params"], {"url": "https://example.com"})
+            self.assertEqual(call.call_args.kwargs["params"], {
+                "url": "https://example.com", "useMainContentOnly": "true",
+            })
             self.assertEqual(page["url"], "https://example.com/docs")
             self.assertEqual(page["title"], "Docs")
             self.assertEqual(page["content"], "x" * search.DEFAULT_MAX_FETCH_CHARS)
             self.assertTrue(page["_meta"]["truncated"])
+            self.assertEqual(page["_meta"]["cache_metadata"], payload["cache_metadata"])
             self.assertNotIn("test-context-key", json.dumps(page))
 
     def test_failed_and_malformed_responses_preserve_current_audit(self):
