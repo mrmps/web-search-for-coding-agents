@@ -25,7 +25,7 @@ FIRECRAWL_SEARCH_URL = "https://api.firecrawl.dev/v2/search"
 FIRECRAWL_SCRAPE_URL = "https://api.firecrawl.dev/v2/scrape"
 CONTEXT_SEARCH_URL = "https://api.context.dev/v1/web/search"
 CONTEXT_SCRAPE_URL = "https://api.context.dev/v1/web/scrape/markdown"
-CONTEXT_SNIPPET_CHARS = 1200
+CONTEXT_SNIPPET_CHARS = 20000
 EXA_SEARCH_URL = "https://api.exa.ai/search"
 EXA_CONTENTS_URL = "https://api.exa.ai/contents"
 LINKUP_SEARCH_URL = "https://api.linkup.so/v1/search"
@@ -215,7 +215,7 @@ class FirecrawlSearch:
 
 
 class ContextSearch:
-    """Context.dev search descriptions + separate Markdown scrape; dual-split."""
+    """Context.dev search Highlights + separate Markdown scrape; dual-split."""
 
     name = "context"
     last_meta: dict[str, Any] | None = None
@@ -235,7 +235,7 @@ class ContextSearch:
             json_body={
                 "query": query,
                 "numResults": max(10, n),
-                "highlightsOptions": {"enabled": False},
+                "highlightsOptions": {"enabled": True, "maxCharacters": CONTEXT_SNIPPET_CHARS},
             },
             timeout=60,
         )
@@ -843,10 +843,13 @@ def parse_context_hits(payload: Any, *, max_results: int = DEFAULT_MAX_RESULTS) 
         if url in seen:
             continue
         seen.add(url)
+        highlights = item.get("highlights") or {}
+        parts = highlights.get("highlights") or []
+        snippet = "\n".join(part for part in parts if isinstance(part, str)) if highlights.get("code") == "SUCCESS" else ""
         hits.append({
             "url": url,
             "title": str(item.get("title") or ""),
-            "snippet": str(item.get("description") or "")[:CONTEXT_SNIPPET_CHARS],
+            "snippet": (snippet.strip() or str(item.get("description") or ""))[:CONTEXT_SNIPPET_CHARS],
         })
         if len(hits) >= max_results:
             break

@@ -153,8 +153,10 @@ Keys: `OPENAI_API_KEY` (or Azure NEXTGEN), plus the vendor you run
 
 Use `--backend context` with either `--split search-only` or
 `--split search-fetch`, and set `CONTEXT_API_KEY`. Search calls
-`POST https://api.context.dev/v1/web/search` with `highlightsOptions.enabled=false`.
-Result descriptions become snippets, capped at 1,200 characters. Context requires
+`POST https://api.context.dev/v1/web/search` with
+`highlightsOptions={"enabled":true,"maxCharacters":20000}`. Successful Highlights
+become snippets, with descriptions as a fallback. The runner has no shared search
+character cap, so Context uses its API maximum of 20,000 per result. Context requires
 10–100 results per request, so the runner requests at least 10 and returns only
 the harness's requested count (eight by default). The query is sent unchanged.
 
