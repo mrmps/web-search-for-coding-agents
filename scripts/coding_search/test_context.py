@@ -32,10 +32,10 @@ class ContextContracts(unittest.TestCase):
         self.assertNotIn("context", search.FETCH_FORBIDDEN)
         self.assertNotIn("context", search.FETCH_REQUIRED)
 
-    def test_search_limits_highlights_deduplication_and_redaction(self):
+    def test_search_limits_descriptions_deduplication_and_redaction(self):
         rows = [
-            {"url": "https://example.com", "title": "Example", "description": "fallback",
-             "highlights": {"code": "SUCCESS", "highlights": ["x" * 1500]},
+            {"url": "https://example.com", "title": "Example", "description": "x" * 1500,
+             "highlights": {"code": "SUCCESS", "highlights": ["ignored highlights"]},
              "markdown": {"markdown": "Do not send full pages in search"}},
             {"url": "https://example.com"}, {}, None,
             {"url": "https://example.org", "description": "description"},
@@ -48,7 +48,7 @@ class ContextContracts(unittest.TestCase):
                 self.assertEqual(call.call_args.args, ("POST", search.CONTEXT_SEARCH_URL))
                 self.assertEqual(call.call_args.kwargs["json"], {
                     "query": "site:example.com unchanged query", "numResults": requested,
-                    "highlightsOptions": {"enabled": True, "maxCharacters": 1200},
+                    "highlightsOptions": {"enabled": False},
                 })
                 self.assertEqual(hits[0], {
                     "url": "https://example.com", "title": "Example", "snippet": "x" * 1200,
@@ -57,8 +57,9 @@ class ContextContracts(unittest.TestCase):
                 self.assertEqual(self.backend.last_meta["n_hits"], len(hits))
                 self.assertNotIn("test-context-key", json.dumps(self.backend.last_meta))
 
-    def test_failed_or_empty_highlights_use_description(self):
-        for highlights in ({"code": "TIMEOUT", "highlights": ["not evidence"]},
+    def test_highlights_are_ignored(self):
+        for highlights in ({"code": "SUCCESS", "highlights": ["ignored highlights"]},
+                           {"code": "TIMEOUT", "highlights": ["not evidence"]},
                            {"code": "SUCCESS", "highlights": []},
                            {"code": "NOT_REQUESTED", "highlights": None}):
             with self.subTest(highlights=highlights), patch.object(
@@ -135,6 +136,7 @@ class ContextLive(unittest.TestCase):
         self.assertLessEqual(len(hits), search.DEFAULT_MAX_RESULTS)
         self.assertTrue(any("TaskGroup" in hit["snippet"] for hit in hits))
         search_meta = dict(backend.last_meta)
+        self.assertEqual(search_meta["request"]["json"]["highlightsOptions"], {"enabled": False})
         page = backend.fetch(hits[0]["url"])
         self.assertTrue(page["content"].strip())
         self.assertLessEqual(len(page["content"]), search.DEFAULT_MAX_FETCH_CHARS)

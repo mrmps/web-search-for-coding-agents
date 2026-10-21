@@ -153,26 +153,18 @@ Keys: `OPENAI_API_KEY` (or Azure NEXTGEN), plus the vendor you run
 
 Use `--backend context` with either `--split search-only` or
 `--split search-fetch`, and set `CONTEXT_API_KEY`. Search calls
-`POST https://api.context.dev/v1/web/search` with `highlightsOptions.enabled=true`
-and `highlightsOptions.maxCharacters=1200`;
-successful highlights become snippets, with the result description used when
-highlights are unavailable or empty. Context requires 10–100 results per request,
-so the runner requests at least 10 and returns only the harness's requested count
-(eight by default). Highlights are selected within the 1,200-character snippet
-budget.
-The query is sent unchanged.
+`POST https://api.context.dev/v1/web/search` with `highlightsOptions.enabled=false`.
+Result descriptions become snippets, capped at 1,200 characters. Context requires
+10–100 results per request, so the runner requests at least 10 and returns only
+the harness's requested count (eight by default). The query is sent unchanged.
 
 Fetch calls `GET https://api.context.dev/v1/web/scrape/markdown` for the selected
 URL with `useMainContentOnly=true` so navigation does not consume the shared
 16,000-character content limit. Both splits use the same search configuration.
 
-Freshness controls are omitted, as in the other vendor runners. At contribution
-time, Context accepts cached page content up to 365 days old for Highlights
-(`markdownOptions.maxAgeMs`) and 3 days old for fetch (`maxAgeMs`). These are
-maximum permitted ages, not the age of every response. Setting either to `0`
-forces fresh page retrieval; `freshness` instead filters publication dates.
-The API's `cache_metadata` is retained in the raw HTTP audit and tracing metadata.
-This configuration measures default caching, not an always-live crawl.
+Freshness and cache controls retain Context's defaults. The API's `cache_metadata`
+is retained in the raw HTTP audit and tracing metadata. This configuration
+measures default caching, not an always-live crawl.
 
 Context is available in the harness; leaderboard scores
 require a maintainer run on the held-out tickets.

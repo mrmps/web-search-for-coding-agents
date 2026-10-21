@@ -215,7 +215,7 @@ class FirecrawlSearch:
 
 
 class ContextSearch:
-    """Context.dev query highlights + separate Markdown scrape; dual-split."""
+    """Context.dev search descriptions + separate Markdown scrape; dual-split."""
 
     name = "context"
     last_meta: dict[str, Any] | None = None
@@ -235,7 +235,7 @@ class ContextSearch:
             json_body={
                 "query": query,
                 "numResults": max(10, n),
-                "highlightsOptions": {"enabled": True, "maxCharacters": CONTEXT_SNIPPET_CHARS},
+                "highlightsOptions": {"enabled": False},
             },
             timeout=60,
         )
@@ -843,13 +843,10 @@ def parse_context_hits(payload: Any, *, max_results: int = DEFAULT_MAX_RESULTS) 
         if url in seen:
             continue
         seen.add(url)
-        highlights = item.get("highlights") or {}
-        parts = highlights.get("highlights") if highlights.get("code") == "SUCCESS" else None
-        snippet = "\n".join(part for part in parts if isinstance(part, str)) if isinstance(parts, list) else ""
         hits.append({
             "url": url,
             "title": str(item.get("title") or ""),
-            "snippet": (snippet or str(item.get("description") or ""))[:CONTEXT_SNIPPET_CHARS],
+            "snippet": str(item.get("description") or "")[:CONTEXT_SNIPPET_CHARS],
         })
         if len(hits) >= max_results:
             break
